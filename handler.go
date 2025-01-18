@@ -122,6 +122,9 @@ type Options struct {
 
 	// Disable color (Default: false)
 	NoColor bool
+
+	// prefix before the message and source
+	CustomPrefix string
 }
 
 // NewHandler creates a [slog.Handler] that writes tinted logs to Writer w,
@@ -145,6 +148,7 @@ func NewHandler(w io.Writer, opts *Options) slog.Handler {
 		h.timeFormat = opts.TimeFormat
 	}
 	h.noColor = opts.NoColor
+	h.customPrefix = opts.CustomPrefix
 	return h
 }
 
@@ -157,24 +161,26 @@ type handler struct {
 	mu sync.Mutex
 	w  io.Writer
 
-	addSource   bool
-	level       slog.Leveler
-	replaceAttr func([]string, slog.Attr) slog.Attr
-	timeFormat  string
-	noColor     bool
+	addSource    bool
+	level        slog.Leveler
+	replaceAttr  func([]string, slog.Attr) slog.Attr
+	timeFormat   string
+	customPrefix string
+	noColor      bool
 }
 
 func (h *handler) clone() *handler {
 	return &handler{
-		attrsPrefix: h.attrsPrefix,
-		groupPrefix: h.groupPrefix,
-		groups:      h.groups,
-		w:           h.w,
-		addSource:   h.addSource,
-		level:       h.level,
-		replaceAttr: h.replaceAttr,
-		timeFormat:  h.timeFormat,
-		noColor:     h.noColor,
+		attrsPrefix:  h.attrsPrefix,
+		groupPrefix:  h.groupPrefix,
+		groups:       h.groups,
+		w:            h.w,
+		addSource:    h.addSource,
+		level:        h.level,
+		replaceAttr:  h.replaceAttr,
+		timeFormat:   h.timeFormat,
+		noColor:      h.noColor,
+		customPrefix: h.customPrefix,
 	}
 }
 
@@ -212,6 +218,14 @@ func (h *handler) Handle(_ context.Context, r slog.Record) error {
 	} else if a := rep(nil /* groups */, slog.Any(slog.LevelKey, r.Level)); a.Key != "" {
 		h.appendValue(buf, a.Value, false)
 		buf.WriteByte(' ')
+	}
+
+	// write prefix
+	if h.customPrefix != "" {
+		buf.WriteStringIf(!h.noColor, ansiFaint)
+		buf.WriteString(h.customPrefix)
+		buf.WriteByte(' ')
+		buf.WriteStringIf(!h.noColor, ansiReset)
 	}
 
 	// write source

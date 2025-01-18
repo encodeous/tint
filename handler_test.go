@@ -28,6 +28,13 @@ func Example() {
 	slog.Debug("Connected to DB", "db", "myapp", "host", "localhost:5432")
 	slog.Warn("Slow request", "method", "GET", "path", "/users", "duration", 497*time.Millisecond)
 	slog.Error("DB connection lost", tint.Err(errors.New("connection reset")), "db", "myapp")
+
+	logger := slog.New(tint.NewHandler(os.Stderr, &tint.Options{
+		CustomPrefix: "prefix",
+	}))
+
+	logger.Info("Starting server", "addr", ":8080", "env", "production")
+
 	// Output:
 }
 
